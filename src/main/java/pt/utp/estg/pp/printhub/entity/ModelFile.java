@@ -57,6 +57,10 @@ public class ModelFile {
         return id;
     }
 
+    public void setId(Integer id) {
+        this.id = id;
+    }
+
     public String getOriginalName() {
         return originalName;
     }
