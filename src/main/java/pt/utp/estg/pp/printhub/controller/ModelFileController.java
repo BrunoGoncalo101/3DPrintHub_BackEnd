@@ -11,6 +11,7 @@ import pt.utp.estg.pp.printhub.entity.ModelFile;
 import pt.utp.estg.pp.printhub.exception.InvalidFileException;
 import pt.utp.estg.pp.printhub.service.ModelFileService;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/files")
 public class ModelFileController {

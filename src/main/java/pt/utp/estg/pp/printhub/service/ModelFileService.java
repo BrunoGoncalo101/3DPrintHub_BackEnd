@@ -104,7 +104,7 @@ public class ModelFileService {
                 .orElseThrow(() -> new InvalidFileException("Ficheiro não encontrado com o id: " + fileId));
 
         if(modelFile.getVolumeCm3() == null){
-            throw new InvalidFileException("O ficheiro selecionado não possui o volume calculado");
+            throw new InvalidFileException("O orçamento automático por volume está atualmente disponível apenas para ficheiros .STL. Ficheiros .OBJ e .3MF requerem análise manual.");
         }
 
         double densityGcm3 = 1.24;  //ex: PLA

@@ -10,6 +10,7 @@ import pt.utp.estg.pp.printhub.service.CustomRequestService;
 
 import java.util.List;
 
+@CrossOrigin(origins = "*")
 @RestController
 @RequestMapping("/custom-requests")
 public class CustomRequestController {
