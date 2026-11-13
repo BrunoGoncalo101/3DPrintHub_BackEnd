@@ -3,9 +3,11 @@ package pt.utp.estg.pp.printhub.service;
 import org.springframework.stereotype.Service;
 import pt.utp.estg.pp.printhub.dto.*;
 import pt.utp.estg.pp.printhub.entity.CustomRequest;
+import pt.utp.estg.pp.printhub.entity.ModelFile;
 import pt.utp.estg.pp.printhub.exception.InvalidFileException;
 import pt.utp.estg.pp.printhub.model.CustomRequestStatus;
 import pt.utp.estg.pp.printhub.repository.CustomRequestRepository;
+import pt.utp.estg.pp.printhub.repository.ModelFileRepository;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -15,10 +17,12 @@ public class CustomRequestService {
 
     private final CustomRequestRepository customRequestRepository;
     private final ModelFileService modelFileService;
+    private final ModelFileRepository modelFileRepository;
 
-    public CustomRequestService(CustomRequestRepository customRequestRepository, ModelFileService modelFileService) {
+    public CustomRequestService(CustomRequestRepository customRequestRepository, ModelFileService modelFileService, ModelFileRepository modelFileRepository) {
         this.customRequestRepository = customRequestRepository;
         this.modelFileService = modelFileService;
+        this.modelFileRepository = modelFileRepository;
     }
 
     public CustomRequestResponse createRequest(CreateCustomRequestDTO dto) throws InvalidFileException {
@@ -38,6 +42,29 @@ public class CustomRequestService {
 
         CustomRequest saved = customRequestRepository.save(request);
         return CustomRequestResponse.from(saved);
+    }
+
+    public List<ProductionQueueItemDTO> getProductionQueue() {
+        return customRequestRepository.findByStatusOrderByCreatedAtAsc(CustomRequestStatus.APPROVED)
+                .stream()
+                .map(req -> {
+                    String fileName = modelFileRepository.findById(req.getFileId())
+                            .map(ModelFile::getOriginalName)
+                            .orElse("ficheiro_desconhecido");
+
+                    return new ProductionQueueItemDTO(
+                            req.getId(),
+                            req.getFileId(),
+                            fileName,
+                            req.getMaterialId(),
+                            req.getColorId(),
+                            req.getQuantity(),
+                            req.getInfillPercent(),
+                            req.getFinalPrice(),
+                            req.getCreatedAt()
+                    );
+                })
+                .toList();
     }
 
     public CustomRequestResponse approveRequest(Integer requestId, ApproveCustomRequestDTO dto) throws InvalidFileException {
