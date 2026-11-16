@@ -10,6 +10,9 @@ import pt.utp.estg.pp.printhub.repository.ProductRepository;
 
 import java.math.BigDecimal;
 import java.util.NoSuchElementException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import pt.utp.estg.pp.printhub.specification.ProductSpecification;
 
 @Service
 public class ProductService {
@@ -23,6 +26,41 @@ public class ProductService {
 
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
+    }
+
+    // Pesquisar produtos com filtros e paginação
+    public Page<ProductDTO> searchProducts(
+            String texto,
+            Integer categoriaId,
+            Integer materialId,
+            Integer corId,
+            BigDecimal precoMin,
+            BigDecimal precoMax,
+            Pageable pageable) {
+
+        Page<Product> products = productRepository.findAll(
+                ProductSpecification.withFilters(
+                        texto,
+                        categoriaId,
+                        materialId,
+                        corId,
+                        precoMin,
+                        precoMax
+                ),
+                pageable
+        );
+
+        return products.map(this::toDTO);
+    }
+    // ver o produto pelo ID
+    public ProductDTO getProductById(Integer id) {
+
+        Product product = productRepository.findById(id)
+                .orElseThrow(() -> new NoSuchElementException(
+                        "Produto não encontrado."
+                ));
+
+        return toDTO(product);
     }
 
     // Criar produto
