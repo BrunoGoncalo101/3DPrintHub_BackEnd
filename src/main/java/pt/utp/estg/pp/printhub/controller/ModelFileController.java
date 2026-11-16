@@ -40,13 +40,32 @@ public class ModelFileController {
      * Calcula o orçamento estimado para a impressão 3D de um ficheiro específico.
      * Recebe parâmetros opcionais de material e percentagem de preenchimento (infill).
      */
+
     @GetMapping("/{id}/budget")
     public ResponseEntity<QuoteResponse> getQuote(
             @PathVariable Integer id,
             @RequestParam(defaultValue = "1") Integer materialId,
-            @RequestParam(defaultValue = "20") int infillPercent) throws InvalidFileException {
+            @RequestParam(defaultValue = "20") int infillPercent,
+            @RequestParam(required = false) Integer colorId,
+            @RequestParam(defaultValue = "1") Integer quantity)
+            throws InvalidFileException {
 
-        QuoteResponse quote = service.calculateQuote(id, materialId, infillPercent);
+        QuoteResponse quote = service.calculateQuote(
+                id,
+                materialId,
+                infillPercent
+        );
+
+        if (colorId != null) {
+            service.validateQuoteStock(
+                    materialId,
+                    colorId,
+                    quote.estimatedWeightGrams(),
+                    quantity
+            );
+        }
+
         return ResponseEntity.ok(quote);
     }
+
 }
