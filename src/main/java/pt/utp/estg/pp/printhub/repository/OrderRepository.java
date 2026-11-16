@@ -13,6 +13,7 @@ import java.util.Optional;
 public interface OrderRepository extends JpaRepository<Order, Integer> {
 
     Optional<Order> findByIdAndUserId(Integer id, Integer userId);
+    List<Order> findByUserIdOrderByCreatedAtDesc(Integer userId);
 
     // Pesquisa para o admin: cada filtro só é aplicado se vier preenchido
     @Query("""
