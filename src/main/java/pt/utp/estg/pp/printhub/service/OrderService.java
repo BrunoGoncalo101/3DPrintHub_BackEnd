@@ -22,7 +22,8 @@ import pt.utp.estg.pp.printhub.repository.UserRepository;
 import pt.utp.estg.pp.printhub.dto.AdminOrderSummaryResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import pt.utp.estg.pp.printhub.dto.CustomerOrderSummaryResponse;
+import pt.utp.estg.pp.printhub.dto.OrderDetailResponse;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -160,6 +161,33 @@ public class OrderService {
         }
 
         return result;
+    }
+
+    // Lista as encomendas do cliente, da mais recente para a mais antiga
+    @Transactional(readOnly = true)
+    public List<CustomerOrderSummaryResponse> listMine(Integer userId) {
+        List<CustomerOrderSummaryResponse> result = new ArrayList<>();
+
+        for (Order order : orderRepository.findByUserIdOrderByCreatedAtDesc(userId)) {
+            result.add(new CustomerOrderSummaryResponse(
+                    order.getId(),
+                    order.getStatus(),
+                    order.getTotal(),
+                    order.getCreatedAt(),
+                    order.getLines().size()
+            ));
+        }
+
+        return result;
+    }
+
+    // Detalhe de uma encomenda do cliente: linhas, total e histórico de estados
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getMine(Integer userId, Integer orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
+
+        return new OrderDetailResponse(toResponse(order), getHistory(orderId));
     }
 
     // Devolve todas as mudanças de estado de uma encomenda, da mais antiga para a mais recente
