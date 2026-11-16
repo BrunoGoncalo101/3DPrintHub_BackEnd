@@ -107,6 +107,24 @@ public class OrderService {
         return toResponse(order);
     }
 
+    // Pagamento simulado: o cliente paga a sua encomenda (passa de PENDING_PAYMENT para PAID)
+    @Transactional
+    public OrderResponse pay(Integer userId, Integer orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
+
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta encomenda já não está por pagar.");
+        }
+
+        order.setStatus(OrderStatus.PAID);
+        orderRepository.save(order);
+
+        saveHistory(order, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, order.getUser());
+
+        return toResponse(order);
+    }
+
     // Devolve todas as mudanças de estado de uma encomenda, da mais antiga para a mais recente
     @Transactional(readOnly = true)
     public List<OrderStatusHistoryResponse> getHistory(Integer orderId) {
