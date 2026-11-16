@@ -16,7 +16,7 @@ public class Order {
     private Integer id;
 
     @ManyToOne
-    @JoinColumn(name = "utilizador_id", nullable = false)
+    @JoinColumn(name = "utilizador_id")
     private User user;
 
     @Enumerated(EnumType.STRING)
@@ -31,6 +31,12 @@ public class Order {
 
     @Column(name = "morada_entrega", nullable = false)
     private String shippingAddress;
+
+    @Column(name = "email_convidado", length = 150)
+    private String guestEmail;
+
+    @Column(name = "telemovel_convidado", length = 20)
+    private String guestPhone;
 
     @Column(name = "criada_em", nullable = false)
     private LocalDateTime createdAt;
@@ -97,5 +103,21 @@ public class Order {
 
     public List<OrderLine> getLines() {
         return lines;
+    }
+
+    public String getGuestEmail() {
+        return guestEmail;
+    }
+
+    public void setGuestEmail(String guestEmail) {
+        this.guestEmail = guestEmail;
+    }
+
+    public String getGuestPhone() {
+        return guestPhone;
+    }
+
+    public void setGuestPhone(String guestPhone) {
+        this.guestPhone = guestPhone;
     }
 }
