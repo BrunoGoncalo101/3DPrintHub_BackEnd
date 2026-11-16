@@ -3,6 +3,8 @@ package pt.utp.estg.pp.printhub.entity;
 
 import jakarta.persistence.*;
 import java.math.BigDecimal;
+import java.util.HashSet;
+import java.util.Set;
 
 @Entity
 @Table(name = "produtos")
@@ -33,6 +35,14 @@ public class Product {
     @ManyToOne
     @JoinColumn(name = "categoria_id", nullable = false)
     private Category category;
+
+    @ManyToMany
+    @JoinTable(
+            name = "produto_cores",
+            joinColumns = @JoinColumn(name = "produto_id"),
+            inverseJoinColumns = @JoinColumn(name = "cor_id")
+    )
+    private Set<Color> colors = new HashSet<>();
 
     public Product() {
     }
@@ -99,5 +109,14 @@ public class Product {
 
     public void setCategory(Category category) {
         this.category = category;
+    }
+
+    //  cores disponíveis
+    public Set<Color> getColors() {
+        return colors;
+    }
+
+    public void setColors(Set<Color> colors) {
+        this.colors = colors;
     }
 }

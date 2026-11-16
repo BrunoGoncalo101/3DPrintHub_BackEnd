@@ -51,7 +51,13 @@ public class SecurityConfig {
                         // Registo e login
                         .requestMatchers("/auth/**").permitAll()
                         // Catálogo público (só leitura)
-                        .requestMatchers(HttpMethod.GET, "/produtos/**", "/categorias/**", "/materiais/**", "/cores/**").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/produtos/**",
+                                "/categorias/**",
+                                "/materiais/**",
+                                "/cores/**",
+                                "/images/**"
+                        ).permitAll()
                         // Administração: só ADMIN
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         // Tudo o resto exige sessão iniciada
