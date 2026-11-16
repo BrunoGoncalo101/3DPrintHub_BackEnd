@@ -1,3 +1,4 @@
+
 package pt.utp.estg.pp.printhub.service;
 
 import org.junit.jupiter.api.BeforeEach;
@@ -6,9 +7,12 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
 import pt.utp.estg.pp.printhub.dto.QuoteResponse;
+import pt.utp.estg.pp.printhub.entity.Material;
 import pt.utp.estg.pp.printhub.entity.ModelFile;
 import pt.utp.estg.pp.printhub.exception.InvalidFileException;
+import pt.utp.estg.pp.printhub.repository.MaterialRepository;
 import pt.utp.estg.pp.printhub.repository.ModelFileRepository;
 
 import java.math.BigDecimal;
@@ -23,22 +27,45 @@ class ModelFileServiceTest {
     @Mock
     private ModelFileRepository repository;
 
+    @Mock
+    private MaterialRepository materialRepository;
+
+    @Mock
+    private StockService stockService;
+
     private ModelFileService service;
 
     @BeforeEach
     void setUp() {
-        service = new ModelFileService(repository, "uploads");
+        service = new ModelFileService(
+                repository,
+                "uploads",
+                materialRepository,
+                stockService
+        );
     }
 
     @Test
     @DisplayName("Deve calcular o orçamento corretamente para um ficheiro com volume válido")
     void calculateQuote_Success() throws InvalidFileException {
+
         ModelFile file = new ModelFile();
         file.setId(1);
-        file.setOriginalName("peça_teste.stl");
+        file.setOriginalName("peca_teste.stl");
         file.setVolumeCm3(BigDecimal.valueOf(10.0));
 
-        when(repository.findById(1)).thenReturn(Optional.of(file));
+        Material material = new Material();
+        material.setId(1);
+        material.setName("PLA");
+        material.setActive(true);
+        material.setDensity(new BigDecimal("1.24"));
+        material.setPricePerGram(new BigDecimal("0.05"));
+
+        when(repository.findById(1))
+                .thenReturn(Optional.of(file));
+
+        when(materialRepository.findById(1))
+                .thenReturn(Optional.of(material));
 
         QuoteResponse quote = service.calculateQuote(1, 1, 20);
 
@@ -49,15 +76,20 @@ class ModelFileServiceTest {
     }
 
     @Test
-    @DisplayName("Deve lançar exceção ao tentar calcular orçamento de ficheiro sem volume (.OBJ/.3MF)")
+    @DisplayName("Deve lançar exceção ao calcular orçamento de ficheiro sem volume")
     void calculateQuote_NullVolume_ThrowsException() {
+
         ModelFile file = new ModelFile();
         file.setId(2);
         file.setOriginalName("modelo.obj");
         file.setVolumeCm3(null);
 
-        when(repository.findById(2)).thenReturn(Optional.of(file));
+        when(repository.findById(2))
+                .thenReturn(Optional.of(file));
 
-        assertThrows(InvalidFileException.class, () -> service.calculateQuote(2, 1, 20));
+        assertThrows(
+                InvalidFileException.class,
+                () -> service.calculateQuote(2, 1, 20)
+        );
     }
 }

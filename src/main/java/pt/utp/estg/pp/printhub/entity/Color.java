@@ -2,6 +2,7 @@
 package pt.utp.estg.pp.printhub.entity;
 
 import jakarta.persistence.*;
+import java.math.BigDecimal;
 
 @Entity
 @Table(name = "cores")
@@ -23,6 +24,10 @@ public class Color {
     @ManyToOne
     @JoinColumn(name = "material_id", nullable = false)
     private Material material;
+
+    // Stock disponível desta cor, em gramas
+    @Column(name = "stock_gramas", nullable = false, precision = 12, scale = 2)
+    private BigDecimal stockGrams = BigDecimal.ZERO;
 
     public Color() {
     }
@@ -65,5 +70,13 @@ public class Color {
 
     public void setMaterial(Material material) {
         this.material = material;
+    }
+
+    public BigDecimal getStockGrams() {
+        return stockGrams;
+    }
+
+    public void setStockGrams(BigDecimal stockGrams) {
+        this.stockGrams = stockGrams;
     }
 }

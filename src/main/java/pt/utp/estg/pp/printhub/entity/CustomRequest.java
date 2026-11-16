@@ -32,6 +32,9 @@ public class CustomRequest {
     @Column(name = "estimated_price", nullable = false, precision = 10, scale = 2)
     private BigDecimal estimatedPrice;
 
+    @Column(name = "reserved_stock_grams", nullable = false, precision = 12, scale = 2)
+    private BigDecimal reservedStockGrams = BigDecimal.ZERO;
+
     @Column(name = "final_price", precision = 10, scale = 2)
     private BigDecimal finalPrice;
 
@@ -92,4 +95,12 @@ public class CustomRequest {
 
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+
+    public BigDecimal getReservedStockGrams() {
+        return reservedStockGrams;
+    }
+
+    public void setReservedStockGrams(BigDecimal reservedStockGrams) {
+        this.reservedStockGrams = reservedStockGrams;
+    }
 }
