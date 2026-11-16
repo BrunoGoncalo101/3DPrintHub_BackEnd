@@ -22,7 +22,8 @@ import pt.utp.estg.pp.printhub.repository.UserRepository;
 import pt.utp.estg.pp.printhub.dto.AdminOrderSummaryResponse;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-
+import pt.utp.estg.pp.printhub.dto.CustomerOrderSummaryResponse;
+import pt.utp.estg.pp.printhub.dto.OrderDetailResponse;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,6 +31,8 @@ import java.util.List;
 @Service
 public class OrderService {
 
+    private static final BigDecimal SHIPPING_COST = new BigDecimal("4.99");
+    private static final BigDecimal FREE_SHIPPING_FROM = new BigDecimal("50.00");
     private final OrderRepository orderRepository;
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
@@ -57,7 +60,7 @@ public class OrderService {
         order.setUser(userRepository.getReferenceById(userId));
         order.setShippingAddress(request.shippingAddress());
 
-        BigDecimal total = BigDecimal.ZERO;
+        BigDecimal itemsTotal = BigDecimal.ZERO;
 
         for (CartItem item : cartItems) {
             if (!Boolean.TRUE.equals(item.getProduct().getActive())) {
@@ -74,10 +77,12 @@ public class OrderService {
             order.addLine(line);
 
             BigDecimal subtotal = line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
-            total = total.add(subtotal);
+            itemsTotal = itemsTotal.add(subtotal);
         }
 
-        order.setTotal(total);
+        BigDecimal shipping = calculateShipping(itemsTotal);
+        order.setShippingCost(shipping);
+        order.setTotal(itemsTotal.add(shipping));
         Order saved = orderRepository.save(order);
 
         // Primeiro registo do histórico: a encomenda nasce "por pagar"
@@ -162,6 +167,33 @@ public class OrderService {
         return result;
     }
 
+    // Lista as encomendas do cliente, da mais recente para a mais antiga
+    @Transactional(readOnly = true)
+    public List<CustomerOrderSummaryResponse> listMine(Integer userId) {
+        List<CustomerOrderSummaryResponse> result = new ArrayList<>();
+
+        for (Order order : orderRepository.findByUserIdOrderByCreatedAtDesc(userId)) {
+            result.add(new CustomerOrderSummaryResponse(
+                    order.getId(),
+                    order.getStatus(),
+                    order.getTotal(),
+                    order.getCreatedAt(),
+                    order.getLines().size()
+            ));
+        }
+
+        return result;
+    }
+
+    // Detalhe de uma encomenda do cliente: linhas, total e histórico de estados
+    @Transactional(readOnly = true)
+    public OrderDetailResponse getMine(Integer userId, Integer orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
+
+        return new OrderDetailResponse(toResponse(order), getHistory(orderId));
+    }
+
     // Devolve todas as mudanças de estado de uma encomenda, da mais antiga para a mais recente
     @Transactional(readOnly = true)
     public List<OrderStatusHistoryResponse> getHistory(Integer orderId) {
@@ -198,11 +230,21 @@ public class OrderService {
         historyRepository.save(history);
     }
 
+    // Portes: grátis a partir de 50 €, senão 4,99 €
+    private BigDecimal calculateShipping(BigDecimal itemsTotal) {
+        if (itemsTotal.compareTo(FREE_SHIPPING_FROM) >= 0) {
+            return BigDecimal.ZERO;
+        }
+        return SHIPPING_COST;
+    }
+
     private OrderResponse toResponse(Order order) {
         List<OrderLineResponse> lines = new ArrayList<>();
+        BigDecimal itemsTotal = BigDecimal.ZERO;
 
         for (OrderLine line : order.getLines()) {
             BigDecimal subtotal = line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+            itemsTotal = itemsTotal.add(subtotal);
             lines.add(new OrderLineResponse(
                     line.getProduct().getId(),
                     line.getProduct().getName(),
@@ -217,6 +259,8 @@ public class OrderService {
         return new OrderResponse(
                 order.getId(),
                 order.getStatus(),
+                itemsTotal,
+                order.getShippingCost(),
                 order.getTotal(),
                 order.getShippingAddress(),
                 order.getCreatedAt(),

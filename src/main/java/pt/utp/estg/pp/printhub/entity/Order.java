@@ -26,6 +26,9 @@ public class Order {
     @Column(name = "total", nullable = false, precision = 10, scale = 2)
     private BigDecimal total = BigDecimal.ZERO;
 
+    @Column(name = "portes", nullable = false, precision = 10, scale = 2)
+    private BigDecimal shippingCost = BigDecimal.ZERO;
+
     @Column(name = "morada_entrega", nullable = false)
     private String shippingAddress;
 
@@ -75,6 +78,10 @@ public class Order {
     public void setTotal(BigDecimal total) {
         this.total = total;
     }
+
+    public BigDecimal getShippingCost() {return shippingCost;}
+
+    public void setShippingCost(BigDecimal shippingCost) {this.shippingCost = shippingCost;}
 
     public String getShippingAddress() {
         return shippingAddress;

@@ -9,6 +9,8 @@ import java.util.List;
 public record OrderResponse(
         Integer id,
         OrderStatus status,
+        BigDecimal subtotal,
+        BigDecimal shippingCost,
         BigDecimal total,
         String shippingAddress,
         LocalDateTime createdAt,

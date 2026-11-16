@@ -11,6 +11,9 @@ import org.springframework.web.server.ResponseStatusException;
 import pt.utp.estg.pp.printhub.dto.CreateOrderRequest;
 import pt.utp.estg.pp.printhub.dto.OrderResponse;
 import pt.utp.estg.pp.printhub.service.OrderService;
+import pt.utp.estg.pp.printhub.dto.CustomerOrderSummaryResponse;
+import pt.utp.estg.pp.printhub.dto.OrderDetailResponse;
+import java.util.List;
 
 @RestController
 @RequestMapping("/encomendas")
@@ -38,6 +41,21 @@ public class OrderController {
     public OrderResponse pay(@AuthenticationPrincipal Jwt jwt,
                              @PathVariable Integer id) {
         return orderService.pay(currentUserId(jwt), id);
+    }
+
+    @GetMapping
+    @Operation(summary = "As minhas encomendas",
+            description = "Lista as encomendas do cliente, da mais recente para a mais antiga.")
+    public List<CustomerOrderSummaryResponse> listMine(@AuthenticationPrincipal Jwt jwt) {
+        return orderService.listMine(currentUserId(jwt));
+    }
+
+    @GetMapping("/{id}")
+    @Operation(summary = "Detalhe da encomenda",
+            description = "Mostra as linhas, o total, a morada e o histórico de estados de uma encomenda do cliente.")
+    public OrderDetailResponse getMine(@AuthenticationPrincipal Jwt jwt,
+                                       @PathVariable Integer id) {
+        return orderService.getMine(currentUserId(jwt), id);
     }
 
     private Integer currentUserId(Jwt jwt) {
