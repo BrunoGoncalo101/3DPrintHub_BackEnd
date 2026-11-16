@@ -50,6 +50,8 @@ public class SecurityConfig {
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**", "/error").permitAll()
                         // Registo e login
                         .requestMatchers("/auth/**").permitAll()
+                        // Compra sem conta
+                        .requestMatchers(HttpMethod.POST, "/encomendas/convidado", "/encomendas/convidado/**").permitAll()
                         // Catálogo público (só leitura)
                         .requestMatchers(HttpMethod.GET,
                                 "/produtos/**",

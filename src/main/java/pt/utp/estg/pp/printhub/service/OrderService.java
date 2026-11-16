@@ -27,6 +27,15 @@ import pt.utp.estg.pp.printhub.dto.OrderDetailResponse;
 import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
+import pt.utp.estg.pp.printhub.dto.AddCartItemRequest;
+import pt.utp.estg.pp.printhub.dto.GuestOrderRequest;
+import pt.utp.estg.pp.printhub.dto.GuestPaymentRequest;
+import pt.utp.estg.pp.printhub.entity.Color;
+import pt.utp.estg.pp.printhub.entity.Material;
+import pt.utp.estg.pp.printhub.entity.Product;
+import pt.utp.estg.pp.printhub.repository.ColorRepository;
+import pt.utp.estg.pp.printhub.repository.MaterialRepository;
+import pt.utp.estg.pp.printhub.repository.ProductRepository;
 
 @Service
 public class OrderService {
@@ -37,15 +46,24 @@ public class OrderService {
     private final CartItemRepository cartItemRepository;
     private final UserRepository userRepository;
     private final OrderStatusHistoryRepository historyRepository;
+    private final ProductRepository productRepository;
+    private final MaterialRepository materialRepository;
+    private final ColorRepository colorRepository;
 
     public OrderService(OrderRepository orderRepository,
                         CartItemRepository cartItemRepository,
                         UserRepository userRepository,
-                        OrderStatusHistoryRepository historyRepository) {
+                        OrderStatusHistoryRepository historyRepository,
+                        ProductRepository productRepository,
+                        MaterialRepository materialRepository,
+                        ColorRepository colorRepository) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.userRepository = userRepository;
         this.historyRepository = historyRepository;
+        this.productRepository = productRepository;
+        this.materialRepository = materialRepository;
+        this.colorRepository = colorRepository;
     }
 
     // Cria uma encomenda com o que está no carrinho e depois esvazia o carrinho
@@ -153,10 +171,17 @@ public class OrderService {
         List<AdminOrderSummaryResponse> result = new ArrayList<>();
 
         for (Order order : orderRepository.search(status, fromTime, toTime)) {
+            String customerName = "Convidado";
+            String customerEmail = order.getGuestEmail();
+            if (order.getUser() != null) {
+                customerName = order.getUser().getName();
+                customerEmail = order.getUser().getEmail();
+            }
+
             result.add(new AdminOrderSummaryResponse(
                     order.getId(),
-                    order.getUser().getName(),
-                    order.getUser().getEmail(),
+                    customerName,
+                    customerEmail,
                     order.getStatus(),
                     order.getTotal(),
                     order.getCreatedAt(),
@@ -192,6 +217,93 @@ public class OrderService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
 
         return new OrderDetailResponse(toResponse(order), getHistory(orderId));
+    }
+
+    // Encomenda de convidado: sem conta, com email e/ou telemóvel, e os produtos vêm no pedido
+    @Transactional
+    public OrderResponse createForGuest(GuestOrderRequest request) {
+        boolean hasEmail = request.email() != null && !request.email().isBlank();
+        boolean hasPhone = request.phone() != null && !request.phone().isBlank();
+
+        if (!hasEmail && !hasPhone) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Indique um email ou um número de telemóvel.");
+        }
+
+        Order order = new Order();
+        order.setShippingAddress(request.shippingAddress());
+        if (hasEmail) {
+            order.setGuestEmail(request.email().trim());
+        }
+        if (hasPhone) {
+            order.setGuestPhone(request.phone().trim());
+        }
+
+        BigDecimal itemsTotal = BigDecimal.ZERO;
+
+        for (AddCartItemRequest item : request.items()) {
+            Product product = productRepository.findById(item.productId())
+                    .filter(p -> Boolean.TRUE.equals(p.getActive()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Produto não encontrado."));
+
+            Material material = materialRepository.findById(item.materialId())
+                    .filter(m -> Boolean.TRUE.equals(m.getActive()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Material não encontrado."));
+
+            Color color = colorRepository.findById(item.colorId())
+                    .filter(c -> Boolean.TRUE.equals(c.getAvailable()))
+                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Cor não encontrada."));
+
+            if (!color.getMaterial().getId().equals(material.getId())) {
+                throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A cor não pertence ao material escolhido.");
+            }
+
+            OrderLine line = new OrderLine();
+            line.setProduct(product);
+            line.setMaterial(material);
+            line.setColor(color);
+            line.setQuantity(item.quantity());
+            line.setUnitPrice(product.getBasePrice());
+            order.addLine(line);
+
+            BigDecimal subtotal = line.getUnitPrice().multiply(BigDecimal.valueOf(line.getQuantity()));
+            itemsTotal = itemsTotal.add(subtotal);
+        }
+
+        BigDecimal shipping = calculateShipping(itemsTotal);
+        order.setShippingCost(shipping);
+        order.setTotal(itemsTotal.add(shipping));
+        Order saved = orderRepository.save(order);
+
+        // Sem utilizador: no histórico, "alterado por" fica vazio
+        saveHistory(saved, null, OrderStatus.PENDING_PAYMENT, null);
+
+        return toResponse(saved);
+    }
+
+    // Pagamento simulado do convidado: tem de indicar o email ou o telemóvel usado na encomenda
+    @Transactional
+    public OrderResponse payAsGuest(Integer orderId, GuestPaymentRequest request) {
+        Order order = orderRepository.findById(orderId)
+                .filter(o -> o.getUser() == null)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
+
+        String contact = request.contact().trim();
+        boolean matches = contact.equalsIgnoreCase(order.getGuestEmail()) || contact.equals(order.getGuestPhone());
+
+        if (!matches) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada.");
+        }
+
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta encomenda já não está por pagar.");
+        }
+
+        order.setStatus(OrderStatus.PAID);
+        orderRepository.save(order);
+
+        saveHistory(order, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, null);
+
+        return toResponse(order);
     }
 
     // Devolve todas as mudanças de estado de uma encomenda, da mais antiga para a mais recente
