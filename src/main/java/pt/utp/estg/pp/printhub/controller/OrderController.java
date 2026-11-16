@@ -32,6 +32,14 @@ public class OrderController {
         return orderService.createFromCart(currentUserId(jwt), request);
     }
 
+    @PostMapping("/{id}/pagamento")
+    @Operation(summary = "Pagar encomenda (simulado)",
+            description = "Marca a encomenda como paga. Só funciona se estiver por pagar.")
+    public OrderResponse pay(@AuthenticationPrincipal Jwt jwt,
+                             @PathVariable Integer id) {
+        return orderService.pay(currentUserId(jwt), id);
+    }
+
     private Integer currentUserId(Jwt jwt) {
         if (jwt == null) {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "É preciso iniciar sessão.");

@@ -19,6 +19,9 @@ import pt.utp.estg.pp.printhub.repository.CartItemRepository;
 import pt.utp.estg.pp.printhub.repository.OrderRepository;
 import pt.utp.estg.pp.printhub.repository.OrderStatusHistoryRepository;
 import pt.utp.estg.pp.printhub.repository.UserRepository;
+import pt.utp.estg.pp.printhub.dto.AdminOrderSummaryResponse;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
@@ -105,6 +108,58 @@ public class OrderService {
         saveHistory(order, current, next, userRepository.getReferenceById(adminId));
 
         return toResponse(order);
+    }
+
+    // Pagamento simulado: o cliente paga a sua encomenda (passa de PENDING_PAYMENT para PAID)
+    @Transactional
+    public OrderResponse pay(Integer userId, Integer orderId) {
+        Order order = orderRepository.findByIdAndUserId(orderId, userId)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Encomenda não encontrada."));
+
+        if (order.getStatus() != OrderStatus.PENDING_PAYMENT) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "Esta encomenda já não está por pagar.");
+        }
+
+        order.setStatus(OrderStatus.PAID);
+        orderRepository.save(order);
+
+        saveHistory(order, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, order.getUser());
+
+        return toResponse(order);
+    }
+
+    // Lista de encomendas para o admin, com filtros opcionais por estado e por datas
+    @Transactional(readOnly = true)
+    public List<AdminOrderSummaryResponse> searchForAdmin(OrderStatus status, LocalDate from, LocalDate to) {
+        if (from != null && to != null && from.isAfter(to)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "A data inicial não pode ser depois da data final.");
+        }
+
+        LocalDateTime fromTime = null;
+        if (from != null) {
+            fromTime = from.atStartOfDay();
+        }
+
+        LocalDateTime toTime = null;
+        if (to != null) {
+            toTime = to.plusDays(1).atStartOfDay();
+        }
+
+        List<AdminOrderSummaryResponse> result = new ArrayList<>();
+
+        for (Order order : orderRepository.search(status, fromTime, toTime)) {
+            result.add(new AdminOrderSummaryResponse(
+                    order.getId(),
+                    order.getUser().getName(),
+                    order.getUser().getEmail(),
+                    order.getStatus(),
+                    order.getTotal(),
+                    order.getCreatedAt(),
+                    order.getLines().size()
+            ));
+        }
+
+        return result;
     }
 
     // Devolve todas as mudanças de estado de uma encomenda, da mais antiga para a mais recente
