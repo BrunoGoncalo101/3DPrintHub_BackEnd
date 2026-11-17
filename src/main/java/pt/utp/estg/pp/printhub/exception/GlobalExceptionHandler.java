@@ -16,6 +16,9 @@ import org.springframework.web.multipart.support.MissingServletRequestPartExcept
 import pt.utp.estg.pp.printhub.dto.ErrorResponse;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import java.util.stream.Collectors;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.web.server.ResponseStatusException;
 
 /** Transforma todas as exceções no formato JSON de erro comum da API. */
 @RestControllerAdvice
@@ -89,6 +92,30 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, ex.getMessage());
     }
 
+    /** Erros lançados com ResponseStatusException: mantém a mensagem, exceto nos 401/403, que usam as padrão. */
+    @ExceptionHandler(ResponseStatusException.class)
+    public ResponseEntity<ErrorResponse> handleResponseStatus(ResponseStatusException ex) {
+        HttpStatusCode status = ex.getStatusCode();
+        String message = switch (status.value()) {
+            case 401 -> SecurityMessages.AUTHENTICATION_REQUIRED;
+            case 403 -> SecurityMessages.ACCESS_DENIED;
+            default -> ex.getReason() != null ? ex.getReason() : getMessageForStatusCode(status.value());
+        };
+        return buildResponse(status, message);
+    }
+
+    /** Falta de autenticação detetada dentro de um controller ou service. */
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponse> handleAuthentication(AuthenticationException ex) {
+        return buildResponse(HttpStatus.UNAUTHORIZED, SecurityMessages.AUTHENTICATION_REQUIRED);
+    }
+
+    /** Falta de permissão detetada dentro de um controller ou service (por exemplo, @PreAuthorize). */
+    @ExceptionHandler(AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDenied(AccessDeniedException ex) {
+        return buildResponse(HttpStatus.FORBIDDEN, SecurityMessages.ACCESS_DENIED);
+    }
+
     /** Trata erros genéricos e exceções HTTP do Spring. */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex) {
@@ -103,8 +130,11 @@ public class GlobalExceptionHandler {
     private static String getMessageForStatusCode(int code) {
         return switch (code) {
             case 400 -> "Pedido inválido.";
+            case 401 -> SecurityMessages.AUTHENTICATION_REQUIRED;
+            case 403 -> SecurityMessages.ACCESS_DENIED;
             case 404 -> "Recurso não encontrado.";
             case 405 -> "Método não permitido.";
+            case 409 -> "Conflito com o estado atual do recurso.";
             case 415 -> "Tipo de conteúdo não suportado.";
             default -> "Erro no pedido.";
         };
