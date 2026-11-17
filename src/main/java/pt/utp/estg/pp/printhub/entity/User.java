@@ -44,6 +44,12 @@ public class User {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "reset_token_hash", length = 64, unique = true)
+    private String resetTokenHash;
+
+    @Column(name = "reset_token_expira_em")
+    private LocalDateTime resetTokenExpiresAt;
+
     public User() {
     }
 
@@ -53,6 +59,22 @@ public class User {
 
     public void setId(Integer id) {
         this.id = id;
+    }
+
+    public String getResetTokenHash() {
+        return resetTokenHash;
+    }
+
+    public void setResetTokenHash(String resetTokenHash) {
+        this.resetTokenHash = resetTokenHash;
+    }
+
+    public LocalDateTime getResetTokenExpiresAt() {
+        return resetTokenExpiresAt;
+    }
+
+    public void setResetTokenExpiresAt(LocalDateTime resetTokenExpiresAt) {
+        this.resetTokenExpiresAt = resetTokenExpiresAt;
     }
 
     public String getName() {
