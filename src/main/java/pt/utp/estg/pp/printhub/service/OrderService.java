@@ -49,6 +49,7 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final MaterialRepository materialRepository;
     private final ColorRepository colorRepository;
+    private final NotificationService notificationService;
 
     public OrderService(OrderRepository orderRepository,
                         CartItemRepository cartItemRepository,
@@ -56,7 +57,7 @@ public class OrderService {
                         OrderStatusHistoryRepository historyRepository,
                         ProductRepository productRepository,
                         MaterialRepository materialRepository,
-                        ColorRepository colorRepository) {
+                        ColorRepository colorRepository, NotificationService notificationService) {
         this.orderRepository = orderRepository;
         this.cartItemRepository = cartItemRepository;
         this.userRepository = userRepository;
@@ -64,6 +65,7 @@ public class OrderService {
         this.productRepository = productRepository;
         this.materialRepository = materialRepository;
         this.colorRepository = colorRepository;
+        this.notificationService = notificationService;
     }
 
     // Cria uma encomenda com o que está no carrinho e depois esvazia o carrinho
@@ -130,6 +132,10 @@ public class OrderService {
 
         saveHistory(order, current, next, userRepository.getReferenceById(adminId));
 
+        if (order.getUser() != null) {
+            notificationService.notifyOrderStatusChange(order.getUser().getId(), order.getId(), next);
+        }
+
         return toResponse(order);
     }
 
@@ -147,6 +153,10 @@ public class OrderService {
         orderRepository.save(order);
 
         saveHistory(order, OrderStatus.PENDING_PAYMENT, OrderStatus.PAID, order.getUser());
+
+        if (order.getUser() != null) {
+            notificationService.notifyOrderStatusChange(order.getUser().getId(), order.getId(), OrderStatus.PAID);
+        }
 
         return toResponse(order);
     }

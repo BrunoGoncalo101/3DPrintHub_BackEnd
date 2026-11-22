@@ -23,17 +23,20 @@ public class CustomRequestService {
     private final ModelFileService modelFileService;
     private final ModelFileRepository modelFileRepository;
     private final StockService stockService;
+    private final NotificationService notificationService;
 
     public CustomRequestService(
             CustomRequestRepository customRequestRepository,
             ModelFileService modelFileService,
             ModelFileRepository modelFileRepository,
-            StockService stockService) {
+            StockService stockService,
+            NotificationService notificationService) {
 
         this.customRequestRepository = customRequestRepository;
         this.modelFileService = modelFileService;
         this.modelFileRepository = modelFileRepository;
         this.stockService = stockService;
+        this.notificationService = notificationService;
     }
 
     @Transactional
@@ -131,6 +134,13 @@ public class CustomRequestService {
 
         CustomRequest saved = customRequestRepository.save(request);
 
+        notificationService.notifyCustomRequestStatusChange(
+                saved.getUserId(),
+                saved.getId(),
+                CustomRequestStatus.APPROVED,
+                "Preço final: " + saved.getFinalPrice() + " €."
+        );
+
         return CustomRequestResponse.from(saved);
     }
 
@@ -175,6 +185,13 @@ public class CustomRequestService {
         );
 
         CustomRequest saved = customRequestRepository.save(request);
+
+        notificationService.notifyCustomRequestStatusChange(
+                saved.getUserId(),
+                saved.getId(),
+                CustomRequestStatus.REJECTED,
+                saved.getRejectionReason()
+        );
 
         return CustomRequestResponse.from(saved);
     }
