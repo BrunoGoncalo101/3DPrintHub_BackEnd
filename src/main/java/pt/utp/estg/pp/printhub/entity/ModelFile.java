@@ -46,6 +46,9 @@ public class ModelFile {
     @Column(name = "criado_em", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "eliminado_em")
+    private LocalDateTime deletedAt;
+
     @PrePersist
     void onCreate() {
         if (createdAt == null) {
@@ -135,5 +138,17 @@ public class ModelFile {
 
     public LocalDateTime getCreatedAt() {
         return createdAt;
+    }
+
+    public void setCreatedAt(LocalDateTime createdAt) {
+        this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getDeletedAt() {
+        return deletedAt;
+    }
+
+    public void setDeletedAt(LocalDateTime deletedAt) {
+        this.deletedAt = deletedAt;
     }
 }

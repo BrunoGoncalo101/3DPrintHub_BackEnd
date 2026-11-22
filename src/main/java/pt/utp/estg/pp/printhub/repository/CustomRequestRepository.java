@@ -10,6 +10,7 @@ import org.springframework.data.repository.query.Param;
 import pt.utp.estg.pp.printhub.entity.CustomRequest;
 import pt.utp.estg.pp.printhub.model.CustomRequestStatus;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -27,4 +28,16 @@ public interface CustomRequestRepository
     Optional<CustomRequest> findByIdForUpdate(
             @Param("requestId") Integer requestId
     );
+
+    @Query("""
+            SELECT p FROM CustomRequest p
+            WHERE p.status IN :terminalStatuses
+              AND COALESCE(p.finishedAt, p.createdAt) < :cutoffDate
+            """)
+    List<CustomRequest> findFinishedBefore(
+            @Param("terminalStatuses") List<CustomRequestStatus> terminalStatuses,
+            @Param("cutoffDate") LocalDateTime cutoffDate
+    );
+
+    boolean existsByFileIdAndStatus(Integer fileId, CustomRequestStatus status);
 }

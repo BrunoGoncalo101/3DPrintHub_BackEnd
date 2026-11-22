@@ -14,6 +14,7 @@ import pt.utp.estg.pp.printhub.repository.ModelFileRepository;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -132,6 +133,8 @@ public class CustomRequestService {
         request.setStatus(CustomRequestStatus.APPROVED);
         request.setFinalPrice(dto.finalPrice());
 
+        request.setFinishedAt(LocalDateTime.now());
+
         CustomRequest saved = customRequestRepository.save(request);
 
         notificationService.notifyCustomRequestStatusChange(
@@ -183,6 +186,8 @@ public class CustomRequestService {
                         ? dto.reason()
                         : "Sem motivo especificado."
         );
+
+        request.setFinishedAt(LocalDateTime.now());
 
         CustomRequest saved = customRequestRepository.save(request);
 

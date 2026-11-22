@@ -51,6 +51,9 @@ public class CustomRequest {
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
+    @Column(name = "finished_at")
+    private LocalDateTime finishedAt;
+
     @PrePersist
     protected void onCreate() {
         this.createdAt = LocalDateTime.now();
@@ -102,5 +105,13 @@ public class CustomRequest {
 
     public void setReservedStockGrams(BigDecimal reservedStockGrams) {
         this.reservedStockGrams = reservedStockGrams;
+    }
+
+    public LocalDateTime getFinishedAt() {
+        return finishedAt;
+    }
+
+    public void setFinishedAt(LocalDateTime finishedAt) {
+        this.finishedAt = finishedAt;
     }
 }
